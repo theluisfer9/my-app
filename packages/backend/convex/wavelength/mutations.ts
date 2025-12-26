@@ -253,6 +253,16 @@ export const startGame = mutation({
       throw new Error("El modo por equipos requiere al menos 4 jugadores");
     }
 
+    // Calcular rondas totales: roundsPerPlayer * número de jugadores
+    // room.totalRounds representa las rondas por jugador
+    const roundsPerPlayer = room.totalRounds;
+    const actualTotalRounds = roundsPerPlayer * players.length;
+
+    // Actualizar el total de rondas real
+    await ctx.db.patch(args.roomId, {
+      totalRounds: actualTotalRounds,
+    });
+
     // Asignar equipos si es modo teams
     if (room.gameMode === "teams") {
       // Mezclar jugadores aleatoriamente

@@ -23,7 +23,10 @@
     "dev:native": "bun run --filter native dev",
     "dev:web": "bun run --filter web dev",
     "dev:server": "bun run --filter @my-app/backend dev",
-    "dev:setup": "bun run --filter @my-app/backend dev:setup"
+    "dev:setup": "bun run --filter @my-app/backend dev:setup",
+    "deploy:convex": "bun run --filter @my-app/backend deploy",
+    "deploy:vercel": "bunx vercel --prod",
+    "deploy": "bun run deploy:convex && bun run deploy:vercel"
   },
   "packageManager": "bun@1.3.3",
   "dependencies": {

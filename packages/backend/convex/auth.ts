@@ -22,8 +22,7 @@ function createAuth(ctx: GenericCtx<DataModel>) {
     trustedOrigins: [siteUrl, ...devOrigins, ...(process.env.TRUSTED_ORIGINS?.split(",") || [])],
     database: authComponent.adapter(ctx),
     emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: false,
+      enabled: false,
     },
     socialProviders: {
       google: {

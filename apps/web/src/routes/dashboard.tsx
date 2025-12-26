@@ -1,10 +1,7 @@
 import { api } from "@my-app/backend/convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
-import { useState } from "react";
 
-import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
 import UserMenu from "@/components/user-menu";
 
 export const Route = createFileRoute("/dashboard")({
@@ -12,7 +9,6 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function RouteComponent() {
-  const [showSignIn, setShowSignIn] = useState(false);
   const privateData = useQuery(api.privateData.get);
 
   return (
@@ -25,11 +21,7 @@ function RouteComponent() {
         </div>
       </Authenticated>
       <Unauthenticated>
-        {showSignIn ? (
-          <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-        ) : (
-          <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-        )}
+        <Navigate to="/signin" />
       </Unauthenticated>
       <AuthLoading>
         <div>Loading...</div>

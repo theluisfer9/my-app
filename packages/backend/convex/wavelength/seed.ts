@@ -1,40 +1,66 @@
 import { mutation } from "../_generated/server";
 
 const INITIAL_SPECTRUMS = [
-  // Cotidiano
-  { leftLabel: "Frío", rightLabel: "Caliente", category: "Cotidiano" },
-  { leftLabel: "Animal feo", rightLabel: "Animal bonito", category: "Cotidiano" },
-  { leftLabel: "Mala película", rightLabel: "Buena película", category: "Cotidiano" },
-  { leftLabel: "Aburrido", rightLabel: "Emocionante", category: "Cotidiano" },
-  { leftLabel: "Comida mala", rightLabel: "Comida deliciosa", category: "Cotidiano" },
-  { leftLabel: "Barato", rightLabel: "Caro", category: "Cotidiano" },
-  { leftLabel: "Suave", rightLabel: "Áspero", category: "Cotidiano" },
-  { leftLabel: "Lento", rightLabel: "Rápido", category: "Cotidiano" },
-  { leftLabel: "Pequeño", rightLabel: "Grande", category: "Cotidiano" },
-  { leftLabel: "Viejo", rightLabel: "Nuevo", category: "Cotidiano" },
-  { leftLabel: "Silencioso", rightLabel: "Ruidoso", category: "Cotidiano" },
-  { leftLabel: "Ligero", rightLabel: "Pesado", category: "Cotidiano" },
-
   // Abstracto
-  { leftLabel: "Triste", rightLabel: "Feliz", category: "Abstracto" },
+  { leftLabel: "Caos", rightLabel: "Orden", category: "Abstracto" },
+  { leftLabel: "Objetivo", rightLabel: "Subjetivo", category: "Abstracto" },
   { leftLabel: "Simple", rightLabel: "Complejo", category: "Abstracto" },
-  { leftLabel: "Introvertido", rightLabel: "Extrovertido", category: "Abstracto" },
-  { leftLabel: "Malo", rightLabel: "Bueno", category: "Abstracto" },
-  { leftLabel: "Común", rightLabel: "Raro", category: "Abstracto" },
-  { leftLabel: "Inútil", rightLabel: "Útil", category: "Abstracto" },
-  { leftLabel: "Olvidable", rightLabel: "Memorable", category: "Abstracto" },
-  { leftLabel: "Fácil", rightLabel: "Difícil", category: "Abstracto" },
-  { leftLabel: "Aburrido", rightLabel: "Divertido", category: "Abstracto" },
-  { leftLabel: "Seguro", rightLabel: "Peligroso", category: "Abstracto" },
+  { leftLabel: "Justo", rightLabel: "Injusto", category: "Abstracto" },
+  { leftLabel: "Realista", rightLabel: "Fantasioso", category: "Abstracto" },
+  { leftLabel: "Ético", rightLabel: "No ético", category: "Abstracto" },
+  { leftLabel: "Natural", rightLabel: "Artificial", category: "Abstracto" },
+  { leftLabel: "Predecible", rightLabel: "Impredecible", category: "Abstracto" },
+  { leftLabel: "Profundo", rightLabel: "Superficial", category: "Abstracto" },
 
-  // Cultura y Opinión
-  { leftLabel: "Villano", rightLabel: "Héroe", category: "Cultura" },
-  { leftLabel: "Subestimado", rightLabel: "Sobrevalorado", category: "Cultura" },
-  { leftLabel: "Retro", rightLabel: "Moderno", category: "Cultura" },
-  { leftLabel: "Para niños", rightLabel: "Para adultos", category: "Cultura" },
-  { leftLabel: "Realista", rightLabel: "Fantástico", category: "Cultura" },
-  { leftLabel: "Normal", rightLabel: "Raro", category: "Cultura" },
-  { leftLabel: "Fracaso", rightLabel: "Éxito", category: "Cultura" },
+  // Personalidad
+  { leftLabel: "Introvertido", rightLabel: "Extrovertido", category: "Personalidad" },
+  { leftLabel: "Educado", rightLabel: "Grosero", category: "Personalidad" },
+  { leftLabel: "Aburrido", rightLabel: "Emocionante", category: "Personalidad" },
+  { leftLabel: "Normal", rightLabel: "Extraño", category: "Personalidad" },
+  { leftLabel: "Seguro", rightLabel: "Arriesgado", category: "Personalidad" },
+  { leftLabel: "Serio", rightLabel: "Ridículo", category: "Personalidad" },
+  { leftLabel: "Amigable", rightLabel: "Hostil", category: "Personalidad" },
+  { leftLabel: "Popular", rightLabel: "Desconocido", category: "Personalidad" },
+
+  // Comida y Gustos
+  { leftLabel: "Sobrevalorado", rightLabel: "Infravalorado", category: "Gustos" },
+  { leftLabel: "Rico", rightLabel: "Asqueroso", category: "Gustos" },
+  { leftLabel: "Saludable", rightLabel: "Poco saludable", category: "Gustos" },
+  { leftLabel: "Tradicional", rightLabel: "Moderno", category: "Gustos" },
+  { leftLabel: "Casero", rightLabel: "Comercial", category: "Gustos" },
+  { leftLabel: "Gourmet", rightLabel: "Simple", category: "Gustos" },
+  { leftLabel: "Moda pasajera", rightLabel: "Atemporal", category: "Gustos" },
+
+  // Gaming
+  { leftLabel: "Casual", rightLabel: "Hardcore", category: "Gaming" },
+  { leftLabel: "Lento", rightLabel: "Rápido", category: "Gaming" },
+  { leftLabel: "Anticuado", rightLabel: "Futurista", category: "Gaming" },
+  { leftLabel: "Indie", rightLabel: "Mainstream", category: "Gaming" },
+  { leftLabel: "Original", rightLabel: "Copia", category: "Gaming" },
+  { leftLabel: "Buggy", rightLabel: "Pulido", category: "Gaming" },
+
+  // Emociones
+  { leftLabel: "Inofensivo", rightLabel: "Ofensivo", category: "Emociones" },
+  { leftLabel: "Frío", rightLabel: "Caliente", category: "Emociones" },
+  { leftLabel: "Relajante", rightLabel: "Estresante", category: "Emociones" },
+  { leftLabel: "Inteligente", rightLabel: "Tonto", category: "Emociones" },
+  { leftLabel: "Elegante", rightLabel: "Vulgar", category: "Emociones" },
+  { leftLabel: "Frustrante", rightLabel: "Satisfactorio", category: "Emociones" },
+
+  // Confianza
+  { leftLabel: "Confiable", rightLabel: "Sospechoso", category: "Confianza" },
+  { leftLabel: "Sincero", rightLabel: "Falso", category: "Confianza" },
+  { leftLabel: "Inspirador", rightLabel: "Deprimente", category: "Confianza" },
+  { leftLabel: "Seguro de sí mismo", rightLabel: "Inseguro", category: "Confianza" },
+  { leftLabel: "Motivador", rightLabel: "Desmotivador", category: "Confianza" },
+  { leftLabel: "Empático", rightLabel: "Insensible", category: "Confianza" },
+
+  // Filosofía
+  { leftLabel: "Libre", rightLabel: "Controlado", category: "Filosofía" },
+  { leftLabel: "Necesario", rightLabel: "Innecesario", category: "Filosofía" },
+  { leftLabel: "Auténtico", rightLabel: "Artificial", category: "Filosofía" },
+  { leftLabel: "Significativo", rightLabel: "Irrelevante", category: "Filosofía" },
+  { leftLabel: "Poderoso", rightLabel: "Débil", category: "Filosofía" },
 ];
 
 export const seedSpectrums = mutation({

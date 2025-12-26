@@ -153,7 +153,7 @@ function CreateRoom() {
 
           {/* Rounds Selector */}
           <div className="flex flex-col gap-3">
-            <label className="text-sm font-medium">Número de rondas</label>
+            <label className="text-sm font-medium">Rondas por jugador</label>
             <div className="flex gap-2">
               {roundOptions.map((rounds) => (
                 <button
@@ -171,6 +171,9 @@ function CreateRoom() {
                 </button>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Cada jugador será psíquico {totalRounds} {totalRounds === 1 ? "vez" : "veces"}
+            </p>
           </div>
 
           {/* Private Room Toggle */}
