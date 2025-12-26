@@ -61,3 +61,6 @@ dev-dist
 
 # Generated
 routeTree.gen.ts
+
+# References (design mockups)
+references/
