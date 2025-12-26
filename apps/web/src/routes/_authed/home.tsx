@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/home")({
+export const Route = createFileRoute("/_authed/home")({
   component: HomeComponent,
 });
 
@@ -94,10 +94,10 @@ const modules = [
 ];
 
 const navItems = [
-  { name: "Inicio", icon: Grid3X3, active: true },
-  { name: "Favoritos", icon: Heart, active: false },
-  { name: "Recientes", icon: History, active: false },
-  { name: "Perfil", icon: User, active: false },
+  { name: "Inicio", icon: Grid3X3, active: true, href: "/home" },
+  { name: "Favoritos", icon: Heart, active: false, href: "/home" },
+  { name: "Recientes", icon: History, active: false, href: "/home" },
+  { name: "Perfil", icon: User, active: false, href: "/profile" },
 ];
 
 function HomeComponent() {
@@ -213,9 +213,9 @@ function HomeComponent() {
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background px-6 pb-6 pt-2">
         <div className="mx-auto flex max-w-md items-center justify-between">
           {navItems.map((item) => (
-            <button
+            <Link
               key={item.name}
-              type="button"
+              to={item.href}
               className={cn(
                 "flex w-16 flex-col items-center gap-1 transition-colors",
                 item.active
@@ -227,7 +227,7 @@ function HomeComponent() {
                 className={cn("size-6", item.active && "fill-primary")}
               />
               <span className="text-[10px] font-medium">{item.name}</span>
-            </button>
+            </Link>
           ))}
         </div>
       </div>
