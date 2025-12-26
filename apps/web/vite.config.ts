@@ -24,5 +24,6 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    host: true, // Permite acceso desde la red local (ej: desde celular)
   },
 });

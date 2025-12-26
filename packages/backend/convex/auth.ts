@@ -13,8 +13,13 @@ const siteUrl = process.env.SITE_URL!;
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 function createAuth(ctx: GenericCtx<DataModel>) {
+  // En desarrollo, permitir cualquier origen local
+  const devOrigins = process.env.NODE_ENV !== "production"
+    ? ["http://localhost:3001", "http://127.0.0.1:3001"]
+    : [];
+
   return betterAuth({
-    trustedOrigins: [siteUrl],
+    trustedOrigins: [siteUrl, ...devOrigins, ...(process.env.TRUSTED_ORIGINS?.split(",") || [])],
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,

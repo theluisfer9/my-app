@@ -10,7 +10,7 @@ export const Route = createFileRoute("/")({
 
 function WelcomeComponent() {
   return (
-    <div className="relative flex h-full w-full flex-col justify-between overflow-hidden">
+    <div className="relative flex h-full w-full flex-col justify-between overflow-y-auto overflow-x-hidden">
       {/* Background decorative elements */}
       <div className="pointer-events-none absolute left-[-20%] top-[-10%] h-[40%] w-[60%] rounded-full bg-primary/20 blur-[100px]" />
       <div className="pointer-events-none absolute bottom-[-10%] right-[-10%] h-[40%] w-[50%] rounded-full bg-primary/10 blur-[80px]" />

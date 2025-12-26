@@ -76,7 +76,7 @@ function SignUpComponent() {
   const isDisabled = isLoading || socialLoading !== null;
 
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center p-6 sm:p-8">
+    <div className="flex h-full w-full flex-col items-center overflow-y-auto p-6 sm:p-8">
       <div className="flex w-full max-w-120 flex-col gap-6 sm:gap-8">
         {/* Header Section */}
         <div className="flex flex-col items-center space-y-3 text-center">

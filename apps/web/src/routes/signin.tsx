@@ -69,7 +69,7 @@ function SignInComponent() {
   const isDisabled = isLoading || socialLoading !== null;
 
   return (
-    <div className="flex min-h-full w-full flex-col overflow-x-hidden">
+    <div className="flex h-full w-full flex-col overflow-y-auto overflow-x-hidden">
       {/* Header Image Section */}
       <div className="px-4 py-3">
         <div

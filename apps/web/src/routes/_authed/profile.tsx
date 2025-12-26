@@ -28,9 +28,14 @@ export const Route = createFileRoute("/_authed/profile")({
 
 function ProfileComponent() {
   const navigate = useNavigate();
-  const { user } = Route.useRouteContext();
+  const { data: session } = authClient.useSession();
+  const user = session?.user;
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  if (!user) {
+    return null;
+  }
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
