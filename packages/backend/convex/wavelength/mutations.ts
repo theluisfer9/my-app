@@ -458,8 +458,8 @@ export const submitGuess = mutation({
         0
       );
 
-      // Calcular puntos del psíquico: promedio de lo que ganaron los demás
-      const psychicPoints = Math.round(totalRoundPoints / confirmedGuesses.length);
+      // Calcular puntos del psíquico: 1 punto por cada adivinador que acertó (puntos > 0)
+      const psychicPoints = confirmedGuesses.filter((g) => (g.pointsEarned ?? 0) > 0).length;
 
       // Actualizar puntuación del psíquico
       const psychicPlayer = await ctx.db

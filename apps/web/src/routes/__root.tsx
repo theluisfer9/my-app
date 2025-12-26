@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import { NotFound } from "@/components/not-found";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -14,6 +15,7 @@ export interface RouterAppContext {}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
+  notFoundComponent: NotFound,
   head: () => ({
     meta: [
       {
