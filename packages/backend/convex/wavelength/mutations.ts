@@ -517,7 +517,7 @@ export const nextRound = mutation({
       throw new Error("Sala no válida");
     }
 
-    // Marcar ronda actual como completada
+    // Obtener ronda actual
     const currentRound = await ctx.db
       .query("rounds")
       .withIndex("by_room_and_number", (q) =>
@@ -525,9 +525,15 @@ export const nextRound = mutation({
       )
       .first();
 
-    if (currentRound) {
-      await ctx.db.patch(currentRound._id, { status: "completed" });
+    // Validar que la ronda esté en status "results" antes de avanzar
+    // Esto evita doble ejecución si dos jugadores hacen clic al mismo tiempo
+    if (!currentRound || currentRound.status !== "results") {
+      // Ya se procesó o no está lista - retornar silenciosamente
+      return { finished: false, alreadyProcessed: true };
     }
+
+    // Marcar ronda como completada
+    await ctx.db.patch(currentRound._id, { status: "completed" });
 
     // Verificar si es la última ronda
     if (room.currentRound >= room.totalRounds) {

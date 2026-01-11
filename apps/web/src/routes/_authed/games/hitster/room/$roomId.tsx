@@ -98,10 +98,15 @@ function LobbyScreen({
   onLeave: () => void;
 }) {
   const [isStarting, setIsStarting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Iniciando...");
 
   const handleStart = async () => {
     setIsStarting(true);
     try {
+      // Si el deck no tiene canciones, mostrar mensaje diferente
+      if (game.deck && game.deck.songCount === 0) {
+        setLoadingMessage("Cargando canciones de Spotify...");
+      }
       await game.startGame();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al iniciar");
@@ -152,17 +157,26 @@ function LobbyScreen({
           </button>
 
           {/* Deck Info */}
-          {game.deck && (
-            <div className="flex items-center gap-3 rounded-xl bg-muted p-4">
-              <Disc3 className="size-8 text-purple-400" />
-              <div>
-                <p className="font-semibold">{game.deck.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {game.deck.songCount > 0
-                    ? `${game.deck.songCount} canciones`
-                    : "Canciones se cargarán al iniciar"}
+          {game.decks.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {game.decks.map((d) => (
+                <div key={d._id} className="flex items-center gap-3 rounded-xl bg-muted p-3">
+                  <Disc3 className="size-6 text-purple-400" />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{d.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {d.songCount > 0
+                        ? `${d.songCount} canciones`
+                        : "Se cargarán al iniciar"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {game.decks.length > 1 && (
+                <p className="text-xs text-center text-muted-foreground">
+                  {game.decks.reduce((sum, d) => sum + d.songCount, 0)} canciones en total
                 </p>
-              </div>
+              )}
             </div>
           )}
 
@@ -212,7 +226,7 @@ function LobbyScreen({
           </div>
 
           {/* Game Settings */}
-          <div className="flex items-center justify-center gap-4 rounded-lg bg-muted p-3 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-lg bg-muted p-3 text-sm">
             <span className="text-muted-foreground">
               Meta: {game.room?.cardsToWin} cartas
             </span>
@@ -224,6 +238,10 @@ function LobbyScreen({
                 </span>
               </>
             )}
+            <span className="text-muted-foreground">•</span>
+            <span className="text-muted-foreground">
+              {game.room?.gameMode === "group" ? "Grupal" : "Remoto"}
+            </span>
           </div>
 
           {game.connectedPlayers.length < 2 && (
@@ -246,7 +264,7 @@ function LobbyScreen({
             {isStarting ? (
               <>
                 <Loader2 className="mr-2 size-5 animate-spin" />
-                Iniciando...
+                {loadingMessage}
               </>
             ) : (
               <>
@@ -320,14 +338,18 @@ function ListeningScreen({
     };
   }, []);
 
-  // Auto-play when song loads
+  // Determinar si debo reproducir audio
+  const shouldPlayAudio =
+    game.room?.gameMode === "group" ? game.isMyTurn : true;
+
+  // Auto-play when song loads (only if should play)
   useEffect(() => {
-    if (game.currentSong?.previewUrl && audioRef.current) {
+    if (game.currentSong?.previewUrl && audioRef.current && shouldPlayAudio) {
       audioRef.current.play().catch(() => {
         // Autoplay might be blocked
       });
     }
-  }, [game.currentSong?.previewUrl]);
+  }, [game.currentSong?.previewUrl, shouldPlayAudio]);
 
   return (
     <>
@@ -346,65 +368,84 @@ function ListeningScreen({
 
       {/* Content */}
       <div className="flex flex-1 flex-col items-center justify-center gap-8 p-6">
-        {/* Album Art */}
-        <div className="relative">
-          <div
-            className={cn(
-              "size-48 overflow-hidden rounded-2xl bg-purple-500/20 shadow-xl",
-              isPlaying && "animate-pulse"
-            )}
-          >
-            {game.currentSong?.coverUrl ? (
-              <img
-                src={game.currentSong.coverUrl}
-                alt="Album cover"
-                className="size-full object-cover"
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center">
-                <Disc3 className="size-24 text-purple-400" />
-              </div>
-            )}
-          </div>
-          {isPlaying && (
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
-              <Volume2 className="size-6 animate-bounce text-purple-400" />
+        {/* En modo grupal y no es tu turno, mostrar solo espera */}
+        {game.room?.gameMode === "group" && !game.isMyTurn ? (
+          <>
+            <div className="flex size-32 items-center justify-center rounded-full bg-muted">
+              <Headphones className="size-16 text-muted-foreground" />
             </div>
-          )}
-        </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">
+                {game.currentTurn?.playerName} está escuchando
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Modo grupal: solo el jugador activo escucha la canción
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Album Art */}
+            <div className="relative">
+              <div
+                className={cn(
+                  "size-48 overflow-hidden rounded-2xl bg-purple-500/20 shadow-xl",
+                  isPlaying && "animate-pulse"
+                )}
+              >
+                {game.currentSong?.coverUrl ? (
+                  <img
+                    src={game.currentSong.coverUrl}
+                    alt="Album cover"
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center">
+                    <Disc3 className="size-24 text-purple-400" />
+                  </div>
+                )}
+              </div>
+              {isPlaying && (
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
+                  <Volume2 className="size-6 animate-bounce text-purple-400" />
+                </div>
+              )}
+            </div>
 
-        {/* Audio Player */}
-        <div className="flex w-full max-w-xs flex-col items-center gap-4">
-          {/* Progress Bar */}
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full bg-purple-500 transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+            {/* Audio Player */}
+            <div className="flex w-full max-w-xs flex-col items-center gap-4">
+              {/* Progress Bar */}
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-purple-500 transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
 
-          {/* Controls */}
-          <button
-            onClick={handlePlayPause}
-            className="flex size-16 items-center justify-center rounded-full bg-purple-500 text-white transition-transform active:scale-95"
-          >
-            {isPlaying ? (
-              <Pause className="size-8" />
-            ) : (
-              <Play className="size-8 translate-x-0.5" />
-            )}
-          </button>
+              {/* Controls */}
+              <button
+                onClick={handlePlayPause}
+                className="flex size-16 items-center justify-center rounded-full bg-purple-500 text-white transition-transform active:scale-95"
+              >
+                {isPlaying ? (
+                  <Pause className="size-8" />
+                ) : (
+                  <Play className="size-8 translate-x-0.5" />
+                )}
+              </button>
 
-          {/* Hidden audio element */}
-          <audio ref={audioRef} src={game.currentSong?.previewUrl} />
-        </div>
+              {/* Hidden audio element */}
+              <audio ref={audioRef} src={game.currentSong?.previewUrl} />
+            </div>
 
-        {/* Instructions */}
-        <p className="text-center text-sm text-muted-foreground">
-          {game.isMyTurn
-            ? "Escucha la canción y decide dónde colocarla en tu timeline"
-            : "Escucha la canción mientras esperas tu turno"}
-        </p>
+            {/* Instructions */}
+            <p className="text-center text-sm text-muted-foreground">
+              {game.isMyTurn
+                ? "Escucha la canción y decide dónde colocarla en tu timeline"
+                : "Escucha la canción mientras esperas tu turno"}
+            </p>
+          </>
+        )}
       </div>
 
       {/* Footer */}
@@ -526,7 +567,12 @@ function PlacingScreen({
             {timeline.map((item, index) => (
               <div key={item.songId} className="flex flex-col gap-2">
                 {/* Card */}
-                <div className="flex items-center gap-3 rounded-xl bg-muted p-3">
+                <div className={cn(
+                  "flex items-center gap-3 rounded-xl p-3",
+                  item.isInitial
+                    ? "bg-purple-500/10 ring-1 ring-purple-500/30"
+                    : "bg-muted"
+                )}>
                   {item.coverUrl && (
                     <img
                       src={item.coverUrl}
@@ -535,7 +581,14 @@ function PlacingScreen({
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="truncate font-medium">{item.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium">{item.name}</p>
+                      {item.isInitial && (
+                        <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-400">
+                          BASE
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-sm text-muted-foreground">
                       {item.artistName}
                     </p>

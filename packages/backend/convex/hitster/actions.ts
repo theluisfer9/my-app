@@ -62,14 +62,59 @@ interface SpotifyTrack {
   track: {
     id: string;
     name: string;
-    artists: Array<{ name: string }>;
+    artists: Array<{ name: string; id: string }>;
     album: {
       name: string;
       release_date: string;
+      album_type: string; // "album", "single", "compilation"
       images: Array<{ url: string }>;
     };
     preview_url: string | null;
+    external_ids?: {
+      isrc?: string;
+    };
   } | null;
+}
+
+// Buscar el año original de una canción usando su ISRC
+// El ISRC es único para cada grabación, así que buscar por ISRC
+// devuelve todas las versiones (álbumes, singles, compilaciones)
+// y tomamos el año más antiguo como el original
+async function getOriginalYearByISRC(
+  token: string,
+  isrc: string,
+  fallbackYear: number
+): Promise<number> {
+  try {
+    const searchResponse = await fetch(
+      `https://api.spotify.com/v1/search?q=isrc:${encodeURIComponent(isrc)}&type=track&limit=50`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!searchResponse.ok) return fallbackYear;
+
+    const data = await searchResponse.json();
+    const tracks = data.tracks?.items as Array<{
+      album: {
+        release_date: string;
+      };
+    }>;
+
+    if (!tracks || tracks.length === 0) return fallbackYear;
+
+    // Encontrar el año más antiguo entre todas las versiones
+    const years = tracks
+      .map((t) => extractYear(t.album.release_date))
+      .filter((y) => !isNaN(y) && y > 1900); // Filtrar años inválidos
+
+    if (years.length === 0) return fallbackYear;
+
+    return Math.min(...years);
+  } catch {
+    return fallbackYear;
+  }
 }
 
 interface SpotifyPlaylistResponse {
@@ -105,9 +150,9 @@ export const fetchPlaylist = action({
     const playlistId = extractPlaylistId(args.playlistUrl);
     const token = await getSpotifyToken();
 
-    // Fetch playlist info
+    // Fetch playlist info (incluye external_ids para obtener ISRC)
     const playlistResponse = await fetch(
-      `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,id,tracks(total,items(track(id,name,artists(name),album(name,release_date,images),preview_url)),next)`,
+      `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,id,tracks(total,items(track(id,name,artists(id,name),album(name,release_date,album_type,images),preview_url,external_ids)),next)`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -166,12 +211,21 @@ export const fetchPlaylist = action({
 
       // Solo agregar si tiene preview
       if (previewUrl) {
+        let releaseYear = extractYear(track.album.release_date);
+
+        // Usar ISRC para encontrar el año original de la canción
+        // Esto funciona para compilaciones, remasters, re-releases, etc.
+        const isrc = track.external_ids?.isrc;
+        if (isrc) {
+          releaseYear = await getOriginalYearByISRC(token, isrc, releaseYear);
+        }
+
         songs.push({
           spotifyTrackId: track.id,
           name: track.name,
           artistName: track.artists.map((a) => a.name).join(", "),
           albumName: track.album.name,
-          releaseYear: extractYear(track.album.release_date),
+          releaseYear,
           previewUrl,
           coverUrl: track.album.images[0]?.url || "",
         });
@@ -191,31 +245,51 @@ export const fetchPlaylist = action({
   },
 });
 
-// Crear deck desde playlist
-export const createDeckFromPlaylist = action({
+// Cargar canciones de un deck existente (para decks creados por seed)
+export const loadDeck = action({
   args: {
-    playlistUrl: v.string(),
-    name: v.optional(v.string()),
-    isPublic: v.optional(v.boolean()),
+    deckId: v.id("hitsterDecks"),
   },
   handler: async (ctx, args): Promise<{
-    deckId: string;
-    name: string;
+    success: boolean;
     songCount: number;
+    error?: string;
   }> => {
-    // Fetch playlist data directamente (evitar circular reference)
-    const playlistId = extractPlaylistId(args.playlistUrl);
+    // Obtener el deck
+    const deck = await ctx.runQuery(internal.hitster.internal.getDeck, {
+      deckId: args.deckId,
+    });
+
+    if (!deck) {
+      return { success: false, songCount: 0, error: "Deck no encontrado" };
+    }
+
+    // Si ya tiene canciones cargadas, no hacer nada
+    if (deck.songCount > 0) {
+      return { success: true, songCount: deck.songCount };
+    }
+
+    // Necesitamos el spotifyPlaylistId para cargar
+    if (!deck.spotifyPlaylistId) {
+      return { success: false, songCount: 0, error: "Deck sin playlist de Spotify" };
+    }
+
+    // Fetch playlist desde Spotify
     const token = await getSpotifyToken();
 
     const playlistResponse = await fetch(
-      `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,id,tracks(total,items(track(id,name,artists(name),album(name,release_date,images),preview_url)),next)`,
+      `https://api.spotify.com/v1/playlists/${deck.spotifyPlaylistId}?fields=name,id,tracks(total,items(track(id,name,artists(id,name),album(name,release_date,album_type,images),preview_url,external_ids)),next)`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
 
     if (!playlistResponse.ok) {
-      throw new Error(`Error obteniendo playlist: ${playlistResponse.status}`);
+      return {
+        success: false,
+        songCount: 0,
+        error: `Error obteniendo playlist: ${playlistResponse.status}`,
+      };
     }
 
     const playlist: SpotifyPlaylistResponse = await playlistResponse.json();
@@ -228,8 +302,9 @@ export const createDeckFromPlaylist = action({
       });
       if (!nextResponse.ok) break;
       const nextData = await nextResponse.json();
-      allTracks = [...allTracks, ...nextData.items];
-      nextUrl = nextData.next;
+      const items = nextData.items ?? nextData.tracks?.items ?? [];
+      allTracks = [...allTracks, ...items];
+      nextUrl = nextData.next ?? nextData.tracks?.next;
     }
 
     const songs: Array<{
@@ -250,12 +325,118 @@ export const createDeckFromPlaylist = action({
         previewUrl = await fetchPreviewUrl(track.id);
       }
       if (previewUrl && songs.length < 100) {
+        let releaseYear = extractYear(track.album.release_date);
+
+        // Usar ISRC para encontrar el año original de la canción
+        const isrc = track.external_ids?.isrc;
+        if (isrc) {
+          releaseYear = await getOriginalYearByISRC(token, isrc, releaseYear);
+        }
+
         songs.push({
           spotifyTrackId: track.id,
           name: track.name,
           artistName: track.artists.map((a) => a.name).join(", "),
           albumName: track.album.name,
-          releaseYear: extractYear(track.album.release_date),
+          releaseYear,
+          previewUrl,
+          coverUrl: track.album.images[0]?.url || "",
+        });
+      }
+    }
+
+    if (songs.length < 30) {
+      return {
+        success: false,
+        songCount: songs.length,
+        error: `Solo encontramos ${songs.length} canciones con preview. Se necesitan 30.`,
+      };
+    }
+
+    // Guardar canciones en el deck
+    await ctx.runMutation(internal.hitster.internal.loadDeckSongs, {
+      deckId: args.deckId,
+      songs,
+    });
+
+    return { success: true, songCount: songs.length };
+  },
+});
+
+// Crear deck desde playlist
+export const createDeckFromPlaylist = action({
+  args: {
+    playlistUrl: v.string(),
+    name: v.optional(v.string()),
+    isPublic: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<{
+    deckId: string;
+    name: string;
+    songCount: number;
+  }> => {
+    // Fetch playlist data directamente (evitar circular reference)
+    const playlistId = extractPlaylistId(args.playlistUrl);
+    const token = await getSpotifyToken();
+
+    const playlistResponse = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,id,tracks(total,items(track(id,name,artists(id,name),album(name,release_date,album_type,images),preview_url,external_ids)),next)`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!playlistResponse.ok) {
+      throw new Error(`Error obteniendo playlist: ${playlistResponse.status}`);
+    }
+
+    const playlist: SpotifyPlaylistResponse = await playlistResponse.json();
+    let allTracks = [...playlist.tracks.items];
+    let nextUrl = playlist.tracks.next;
+
+    while (nextUrl && allTracks.length < 150) {
+      const nextResponse = await fetch(nextUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!nextResponse.ok) break;
+      const nextData = await nextResponse.json();
+      const items = nextData.items ?? nextData.tracks?.items ?? [];
+      allTracks = [...allTracks, ...items];
+      nextUrl = nextData.next ?? nextData.tracks?.next;
+    }
+
+    const songs: Array<{
+      spotifyTrackId: string;
+      name: string;
+      artistName: string;
+      albumName: string;
+      releaseYear: number;
+      previewUrl: string;
+      coverUrl: string;
+    }> = [];
+
+    for (const item of allTracks) {
+      if (!item.track) continue;
+      const track = item.track;
+      let previewUrl = track.preview_url;
+      if (!previewUrl) {
+        previewUrl = await fetchPreviewUrl(track.id);
+      }
+      if (previewUrl && songs.length < 100) {
+        let releaseYear = extractYear(track.album.release_date);
+
+        // Usar ISRC para encontrar el año original de la canción
+        const isrc = track.external_ids?.isrc;
+        if (isrc) {
+          releaseYear = await getOriginalYearByISRC(token, isrc, releaseYear);
+        }
+
+        songs.push({
+          spotifyTrackId: track.id,
+          name: track.name,
+          artistName: track.artists.map((a) => a.name).join(", "),
+          albumName: track.album.name,
+          releaseYear,
           previewUrl,
           coverUrl: track.album.images[0]?.url || "",
         });
@@ -282,6 +463,35 @@ export const createDeckFromPlaylist = action({
       deckId: deckId as string,
       name: args.name || playlist.name,
       songCount: songs.length,
+    };
+  },
+});
+
+// Resetear todos los decks (para recargar con años corregidos)
+export const resetAllDecks = action({
+  args: {},
+  handler: async (ctx): Promise<{
+    reset: number;
+    decks: Array<{ id: string; name: string; deleted: number }>;
+  }> => {
+    const decks = await ctx.runQuery(internal.hitster.internal.getAllDecks, {});
+
+    const results: Array<{ id: string; name: string; deleted: number }> = [];
+
+    for (const deck of decks) {
+      const result = await ctx.runMutation(internal.hitster.internal.resetDeck, {
+        deckId: deck._id,
+      });
+      results.push({
+        id: deck._id,
+        name: deck.name,
+        deleted: result.deleted,
+      });
+    }
+
+    return {
+      reset: decks.length,
+      decks: results,
     };
   },
 });

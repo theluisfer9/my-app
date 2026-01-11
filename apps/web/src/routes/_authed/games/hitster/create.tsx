@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Clock, Disc3, Loader2, Music, Trophy } from "lucide-react";
+import { ArrowLeft, Check, Clock, Disc3, Loader2, Monitor, Music, Trophy, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -24,11 +24,12 @@ function CreateHitsterRoom() {
   const [name, setName] = useState(
     `Sala de ${session?.user?.name ?? "Jugador"}`
   );
-  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
+  const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>([]);
   const [cardsToWin, setCardsToWin] = useState(6);
   const [turnTimeLimit, setTurnTimeLimit] = useState<number | undefined>(
     undefined
   );
+  const [gameMode, setGameMode] = useState<"remote" | "group">("remote");
   const [isCreating, setIsCreating] = useState(false);
 
   const cardsOptions = [6, 8, 10];
@@ -44,8 +45,8 @@ function CreateHitsterRoom() {
       return;
     }
 
-    if (!selectedDeckId) {
-      toast.error("Selecciona un deck de canciones");
+    if (selectedDeckIds.length === 0) {
+      toast.error("Selecciona al menos un deck de canciones");
       return;
     }
 
@@ -56,12 +57,13 @@ function CreateHitsterRoom() {
         name: name.trim(),
         cardsToWin,
         turnTimeLimit,
+        gameMode,
       });
 
-      // Set the deck
+      // Set the deck(s)
       await setDeck({
         roomId: result.roomId,
-        deckId: selectedDeckId as any,
+        deckIds: selectedDeckIds as any,
       });
 
       toast.success(`Sala creada: ${result.code}`);
@@ -122,40 +124,61 @@ function CreateHitsterRoom() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-2">
-                {decks.map((deck) => (
-                  <button
-                    key={deck._id}
-                    type="button"
-                    onClick={() => setSelectedDeckId(deck._id)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all",
-                      selectedDeckId === deck._id
-                        ? "border-purple-500 bg-purple-500/10"
-                        : "border-border hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex size-10 items-center justify-center rounded-lg",
-                        selectedDeckId === deck._id
-                          ? "bg-purple-500 text-white"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <Music className="size-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold">{deck.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {deck.songCount > 0
-                          ? `${deck.songCount} canciones`
-                          : "Canciones se cargarán al iniciar"}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="grid gap-2">
+                  {decks.map((deck) => {
+                    const isSelected = selectedDeckIds.includes(deck._id);
+                    return (
+                      <button
+                        key={deck._id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeckIds((prev) =>
+                            isSelected
+                              ? prev.filter((id) => id !== deck._id)
+                              : [...prev, deck._id]
+                          );
+                        }}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all",
+                          isSelected
+                            ? "border-purple-500 bg-purple-500/10"
+                            : "border-border hover:border-muted-foreground/50"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "flex size-10 items-center justify-center rounded-lg",
+                            isSelected
+                              ? "bg-purple-500 text-white"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <Music className="size-5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold">{deck.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {deck.songCount > 0
+                              ? `${deck.songCount} canciones`
+                              : "Canciones se cargarán al iniciar"}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="flex size-6 items-center justify-center rounded-full bg-purple-500 text-white">
+                            <Check className="size-4" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedDeckIds.length > 1 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {selectedDeckIds.length} decks seleccionados - las canciones se combinarán
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -213,6 +236,66 @@ function CreateHitsterRoom() {
             </div>
           </div>
 
+          {/* Game Mode */}
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium">Modo de juego</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setGameMode("remote")}
+                className={cn(
+                  "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all",
+                  gameMode === "remote"
+                    ? "border-purple-500 bg-purple-500/10"
+                    : "border-border hover:border-muted-foreground/50"
+                )}
+              >
+                <Monitor className={cn(
+                  "size-6",
+                  gameMode === "remote" ? "text-purple-400" : "text-muted-foreground"
+                )} />
+                <span className={cn(
+                  "text-sm font-semibold",
+                  gameMode === "remote" && "text-purple-400"
+                )}>
+                  Remoto
+                </span>
+                <span className="text-xs text-muted-foreground text-center">
+                  Todos escuchan
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGameMode("group")}
+                className={cn(
+                  "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all",
+                  gameMode === "group"
+                    ? "border-purple-500 bg-purple-500/10"
+                    : "border-border hover:border-muted-foreground/50"
+                )}
+              >
+                <Users className={cn(
+                  "size-6",
+                  gameMode === "group" ? "text-purple-400" : "text-muted-foreground"
+                )} />
+                <span className={cn(
+                  "text-sm font-semibold",
+                  gameMode === "group" && "text-purple-400"
+                )}>
+                  Grupal
+                </span>
+                <span className="text-xs text-muted-foreground text-center">
+                  Solo jugador activo
+                </span>
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {gameMode === "remote"
+                ? "Ideal para jugar a distancia - todos escuchan la canción desde su dispositivo."
+                : "Ideal para jugar en persona - solo el jugador activo escucha (conecta bocinas)."}
+            </p>
+          </div>
+
           {/* Info */}
           <p className="text-center text-sm text-muted-foreground">
             Se generará un código único para que otros puedan unirse a tu sala.
@@ -224,7 +307,7 @@ function CreateHitsterRoom() {
       <div className="border-t border-border bg-background p-6">
         <Button
           onClick={handleCreate}
-          disabled={isCreating || !selectedDeckId}
+          disabled={isCreating || selectedDeckIds.length === 0}
           size="lg"
           className="h-14 w-full rounded-xl bg-purple-600 text-base hover:bg-purple-700"
         >

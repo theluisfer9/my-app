@@ -75,6 +75,7 @@ export const createRoom = mutation({
     name: v.string(),
     cardsToWin: v.optional(v.number()),
     turnTimeLimit: v.optional(v.number()),
+    gameMode: v.optional(v.union(v.literal("remote"), v.literal("group"))),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.getAuthUser(ctx);
@@ -104,6 +105,7 @@ export const createRoom = mutation({
       status: "waiting",
       cardsToWin: args.cardsToWin ?? 6,
       turnTimeLimit: args.turnTimeLimit,
+      gameMode: args.gameMode ?? "remote",
       currentPlayerIndex: 0,
       playerOrder: [],
       deckCardIds: [],
@@ -258,11 +260,12 @@ export const leaveRoom = mutation({
   },
 });
 
-// Configurar deck (seleccionar playlist)
+// Configurar deck (seleccionar playlist) - soporta múltiples decks
 export const setDeck = mutation({
   args: {
     roomId: v.id("hitsterRooms"),
-    deckId: v.id("hitsterDecks"),
+    deckId: v.optional(v.id("hitsterDecks")), // Legacy single deck
+    deckIds: v.optional(v.array(v.id("hitsterDecks"))), // Multiple decks
   },
   handler: async (ctx, args) => {
     const user = await authComponent.getAuthUser(ctx);
@@ -273,11 +276,22 @@ export const setDeck = mutation({
     if (room.hostId !== user._id) throw new Error("Solo el host puede configurar");
     if (room.status !== "waiting") throw new Error("La sala ya inició");
 
-    const deck = await ctx.db.get(args.deckId);
-    if (!deck) throw new Error("Deck no encontrado");
+    // Soportar ambos: single deck y multiple decks
+    const deckIdsToUse = args.deckIds ?? (args.deckId ? [args.deckId] : []);
+
+    if (deckIdsToUse.length === 0) {
+      throw new Error("Selecciona al menos un deck");
+    }
+
+    // Validar que todos los decks existan
+    for (const deckId of deckIdsToUse) {
+      const deck = await ctx.db.get(deckId);
+      if (!deck) throw new Error(`Deck ${deckId} no encontrado`);
+    }
 
     await ctx.db.patch(args.roomId, {
-      deckId: args.deckId,
+      deckId: deckIdsToUse[0], // Mantener retrocompatibilidad
+      deckIds: deckIdsToUse,
       updatedAt: Date.now(),
     });
 
@@ -298,7 +312,12 @@ export const startGame = mutation({
     if (!room) throw new Error("Sala no encontrada");
     if (room.hostId !== user._id) throw new Error("Solo el host puede iniciar");
     if (room.status !== "waiting") throw new Error("El juego ya inició");
-    if (!room.deckId) throw new Error("Selecciona un deck primero");
+
+    // Obtener deckIds (nuevo) o deckId (legacy)
+    const deckIdsToUse = room.deckIds ?? (room.deckId ? [room.deckId] : []);
+    if (deckIdsToUse.length === 0) {
+      throw new Error("Selecciona un deck primero");
+    }
 
     const players = await ctx.db
       .query("hitsterPlayers")
@@ -310,15 +329,22 @@ export const startGame = mutation({
       throw new Error("Se necesitan al menos 2 jugadores");
     }
 
-    // Obtener canciones del deck
-    const songs = await ctx.db
-      .query("hitsterSongs")
-      .withIndex("by_deck", (q) => q.eq("deckId", room.deckId!))
-      .collect();
-
-    if (songs.length < 30) {
-      throw new Error("El deck necesita al menos 30 canciones");
+    // Obtener canciones de todos los decks seleccionados
+    const allSongs = [];
+    for (const deckId of deckIdsToUse) {
+      const deckSongs = await ctx.db
+        .query("hitsterSongs")
+        .withIndex("by_deck", (q) => q.eq("deckId", deckId))
+        .collect();
+      allSongs.push(...deckSongs);
     }
+
+    if (allSongs.length < 30) {
+      throw new Error("Los decks necesitan al menos 30 canciones en total");
+    }
+
+    // Usar allSongs en lugar de songs
+    const songs = allSongs;
 
     // Barajar canciones
     const shuffledSongIds = shuffleArray(songs.map((s) => s._id));
@@ -337,6 +363,7 @@ export const startGame = mutation({
             {
               songId: initialSong._id,
               year: initialSong.releaseYear,
+              isInitial: true,
             },
           ],
         });

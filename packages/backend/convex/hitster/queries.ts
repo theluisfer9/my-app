@@ -49,8 +49,19 @@ export const getGameState = query({
       }
     }
 
-    // Obtener deck info
+    // Obtener deck info (soportar múltiples decks)
     let deck = null;
+    let decks: Array<{ _id: string; name: string; songCount: number }> = [];
+
+    const deckIdsToUse = room.deckIds ?? (room.deckId ? [room.deckId] : []);
+    for (const deckId of deckIdsToUse) {
+      const d = await ctx.db.get(deckId);
+      if (d) {
+        decks.push({ _id: d._id, name: d.name, songCount: d.songCount });
+      }
+    }
+
+    // Mantener retrocompatibilidad con single deck
     if (room.deckId) {
       deck = await ctx.db.get(room.deckId);
     }
@@ -80,6 +91,7 @@ export const getGameState = query({
               name: song?.name,
               artistName: song?.artistName,
               coverUrl: song?.coverUrl,
+              isInitial: item.isInitial,
             };
           })
         );
@@ -101,6 +113,7 @@ export const getGameState = query({
         : null,
       currentSong,
       deck,
+      decks,
       isHost: room.hostId === user?._id,
       isMyTurn,
       myPlayer: myPlayer

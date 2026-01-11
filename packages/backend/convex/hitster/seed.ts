@@ -1,36 +1,110 @@
 import { mutation } from "../_generated/server";
 
-// Playlists predefinidas de Spotify (públicas y populares)
+// IDs de playlists viejas a eliminar (para limpiar decks con datos incorrectos)
+const OLD_PLAYLIST_IDS = [
+  // Editoriales de Spotify (no funcionan con Client Credentials)
+  "37i9dQZF1DX4UtSsGT1Sbe",
+  "37i9dQZF1DXbTxeAdrVG2l",
+  "37i9dQZF1DX4o1oenSJRJd",
+  "37i9dQZF1DWXRqgorJj26U",
+  "37i9dQZF1DX10zKzsJ2jva",
+  "37i9dQZF1DXcBWIGoYBM5M",
+  // Playlists anteriores que tenían años incorrectos
+  "0RJYbgmSQULVMK48M1MHud",
+  "3C64V048fGyQfCjmu9TIGA",
+  "6b2dBnxolvwV2L1L4thWRm",
+  "4iXi24GdAEXnMUFfdKJ4dh",
+  "1lvD3XTXCHx0VjXNbl49XF",
+  "5h166CoTrCt89sPCPVz3hW", // Se recargará con años corregidos
+];
+
+// Eliminar decks con playlists que ya no funcionan
+export const cleanupOldDecks = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const deleted = [];
+    for (const playlistId of OLD_PLAYLIST_IDS) {
+      const deck = await ctx.db
+        .query("hitsterDecks")
+        .withIndex("by_playlist", (q) => q.eq("spotifyPlaylistId", playlistId))
+        .first();
+
+      if (deck) {
+        // Eliminar canciones del deck
+        const songs = await ctx.db
+          .query("hitsterSongs")
+          .withIndex("by_deck", (q) => q.eq("deckId", deck._id))
+          .collect();
+
+        for (const song of songs) {
+          await ctx.db.delete(song._id);
+        }
+
+        // Eliminar el deck
+        await ctx.db.delete(deck._id);
+        deleted.push(deck.name);
+      }
+    }
+    return { deleted };
+  },
+});
+
+// Playlists predefinidas de Spotify (curadas manualmente)
 const PREDEFINED_PLAYLISTS = [
+  // 80s
   {
-    name: "Éxitos de los 80s",
-    spotifyPlaylistId: "37i9dQZF1DX4UtSsGT1Sbe", // All Out 80s
-    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DX4UtSsGT1Sbe",
+    name: "80s en Inglés",
+    spotifyPlaylistId: "5xvyjvYdBb1jEDvwhQdEOY",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/5xvyjvYdBb1jEDvwhQdEOY",
   },
   {
-    name: "Éxitos de los 90s",
-    spotifyPlaylistId: "37i9dQZF1DXbTxeAdrVG2l", // All Out 90s
-    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DXbTxeAdrVG2l",
+    name: "80s en Español",
+    spotifyPlaylistId: "21P7VOec1gvIgY2OIc6eqZ",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/21P7VOec1gvIgY2OIc6eqZ",
+  },
+  // 90s
+  {
+    name: "90s en Inglés",
+    spotifyPlaylistId: "79h9jJSvbOd8Lm58S0jEX6",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/79h9jJSvbOd8Lm58S0jEX6",
   },
   {
-    name: "Éxitos de los 2000s",
-    spotifyPlaylistId: "37i9dQZF1DX4o1oenSJRJd", // All Out 2000s
-    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DX4o1oenSJRJd",
+    name: "90s en Español",
+    spotifyPlaylistId: "5QMzMqrZx2EpjF21zkD5L3",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/5QMzMqrZx2EpjF21zkD5L3",
+  },
+  // 2000s
+  {
+    name: "2000s en Inglés",
+    spotifyPlaylistId: "5h166CoTrCt89sPCPVz3hW",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/5h166CoTrCt89sPCPVz3hW",
   },
   {
-    name: "Rock Clásico",
-    spotifyPlaylistId: "37i9dQZF1DWXRqgorJj26U", // Rock Classics
-    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DWXRqgorJj26U",
+    name: "2000s en Español",
+    spotifyPlaylistId: "7oq24EUVDxvrfpU4fzbLcy",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/7oq24EUVDxvrfpU4fzbLcy",
+  },
+  // Rock
+  {
+    name: "Rock Clásico en Inglés",
+    spotifyPlaylistId: "4d7g5e0CIhDZJZXaLkBEHM",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/4d7g5e0CIhDZJZXaLkBEHM",
   },
   {
-    name: "Latin Hits",
-    spotifyPlaylistId: "37i9dQZF1DX10zKzsJ2jva", // Viva Latino
-    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DX10zKzsJ2jva",
+    name: "Rock Clásico en Español",
+    spotifyPlaylistId: "5Z6J7jqK6oF7upv8KhZuds",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/5Z6J7jqK6oF7upv8KhZuds",
+  },
+  // Géneros
+  {
+    name: "Reggaetón Clásico",
+    spotifyPlaylistId: "3LTP24145T1C09LYlSZrWE",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/3LTP24145T1C09LYlSZrWE",
   },
   {
-    name: "Pop Internacional",
-    spotifyPlaylistId: "37i9dQZF1DXcBWIGoYBM5M", // Today's Top Hits
-    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+    name: "Pop en Español",
+    spotifyPlaylistId: "3H7Q09f16faqyDJwsx6adp",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/3H7Q09f16faqyDJwsx6adp",
   },
 ];
 

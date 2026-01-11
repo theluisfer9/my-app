@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect } from "react";
 
 import type { Id } from "@my-app/backend/convex/_generated/dataModel";
@@ -15,6 +15,7 @@ export function useHitsterGame(roomId: Id<"hitsterRooms">) {
   const nextTurnMutation = useMutation(api.hitster.mutations.nextTurn);
   const playAgainMutation = useMutation(api.hitster.mutations.playAgain);
   const heartbeatMutation = useMutation(api.hitster.mutations.heartbeat);
+  const loadDeckAction = useAction(api.hitster.actions.loadDeck);
 
   // Heartbeat para mantener conexión
   useEffect(() => {
@@ -31,6 +32,14 @@ export function useHitsterGame(roomId: Id<"hitsterRooms">) {
   }, [roomId, heartbeatMutation]);
 
   const startGame = async () => {
+    // Cargar canciones de todos los decks que tengan 0 canciones
+    const decksToLoad = decks.filter((d) => d.songCount === 0);
+    for (const d of decksToLoad) {
+      const loadResult = await loadDeckAction({ deckId: d._id as any });
+      if (!loadResult.success) {
+        throw new Error(loadResult.error ?? `Error cargando ${d.name}`);
+      }
+    }
     return startGameMutation({ roomId });
   };
 
@@ -64,6 +73,7 @@ export function useHitsterGame(roomId: Id<"hitsterRooms">) {
   const currentTurn = gameState?.currentTurn;
   const currentSong = gameState?.currentSong;
   const deck = gameState?.deck;
+  const decks = gameState?.decks ?? [];
   const isHost = gameState?.isHost ?? false;
   const isMyTurn = gameState?.isMyTurn ?? false;
   const myPlayer = gameState?.myPlayer;
@@ -105,6 +115,7 @@ export function useHitsterGame(roomId: Id<"hitsterRooms">) {
     currentSong,
     currentPlayer,
     deck,
+    decks,
     cardsRemaining,
 
     // Game state

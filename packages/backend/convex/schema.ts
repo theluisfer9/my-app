@@ -132,10 +132,12 @@ export default defineSchema({
       v.literal("playing"),
       v.literal("finished")
     ),
-    deckId: v.optional(v.id("hitsterDecks")),
+    deckId: v.optional(v.id("hitsterDecks")), // Legacy - single deck
+    deckIds: v.optional(v.array(v.id("hitsterDecks"))), // Multi-deck support
     spotifyPlaylistUrl: v.optional(v.string()), // URL antes de procesar
     cardsToWin: v.number(), // 6, 8, 10
     turnTimeLimit: v.optional(v.number()), // segundos o null = sin límite
+    gameMode: v.optional(v.union(v.literal("remote"), v.literal("group"))), // remote = todos escuchan, group = solo jugador activo
     currentPlayerIndex: v.number(),
     playerOrder: v.array(v.string()), // userIds en orden de turno
     deckCardIds: v.array(v.id("hitsterSongs")), // Deck barajado
@@ -160,6 +162,7 @@ export default defineSchema({
       v.object({
         songId: v.id("hitsterSongs"),
         year: v.number(),
+        isInitial: v.optional(v.boolean()),
       })
     ),
     joinedAt: v.number(),
