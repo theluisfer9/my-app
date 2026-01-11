@@ -52,9 +52,12 @@ function GameRoom() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-6">
         <p className="text-muted-foreground">Sala no encontrada</p>
-        <Button asChild className="rounded-xl">
-          <Link to="/games/wavelength">Volver</Link>
-        </Button>
+        <Link
+          to="/games/wavelength"
+          className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Volver
+        </Link>
       </div>
     );
   }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Clock, Radio, Search, Settings, Wrench } from "lucide-react";
+import { ChevronRight, Clock, Music2, Radio, Search, Settings, Wrench } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 
@@ -43,8 +43,9 @@ function HomeComponent() {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Wavelength Card */}
-        <div className="px-4 pt-4">
+        {/* Game Cards */}
+        <div className="flex flex-col gap-3 px-4 pt-4">
+          {/* Wavelength Card */}
           <Link
             to="/games/wavelength"
             className="flex items-center gap-4 rounded-2xl bg-linear-to-r from-primary/20 to-cyan-500/20 p-4 transition-transform active:scale-[0.98]"
@@ -56,6 +57,23 @@ function HomeComponent() {
               <h3 className="text-lg font-bold">Wavelength</h3>
               <p className="text-sm text-muted-foreground">
                 ¿Puedes leer la mente de tus amigos?
+              </p>
+            </div>
+            <ChevronRight className="size-6 text-muted-foreground" />
+          </Link>
+
+          {/* Hitster Card */}
+          <Link
+            to="/games/hitster"
+            className="flex items-center gap-4 rounded-2xl bg-linear-to-r from-purple-600/20 via-pink-500/20 to-orange-400/20 p-4 transition-transform active:scale-[0.98]"
+          >
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-purple-500/20">
+              <Music2 className="size-8 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold">Hitster</h3>
+              <p className="text-sm text-muted-foreground">
+                Ordena canciones en tu timeline musical
               </p>
             </div>
             <ChevronRight className="size-6 text-muted-foreground" />

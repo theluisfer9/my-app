@@ -90,4 +90,105 @@ export default defineSchema({
   })
     .index("by_round", ["roundId"])
     .index("by_round_and_user", ["roundId", "userId"]),
+
+  // ============================================
+  // HITSTER - Juego de Timeline Musical
+  // ============================================
+
+  // Decks de canciones (playlists de Spotify procesadas)
+  hitsterDecks: defineTable({
+    name: v.string(),
+    spotifyPlaylistId: v.string(),
+    spotifyPlaylistUrl: v.optional(v.string()),
+    songCount: v.number(),
+    createdBy: v.string(), // userId
+    isPublic: v.boolean(), // true para decks predefinidos
+    createdAt: v.number(),
+  })
+    .index("by_playlist", ["spotifyPlaylistId"])
+    .index("by_public", ["isPublic"]),
+
+  // Canciones del deck
+  hitsterSongs: defineTable({
+    deckId: v.id("hitsterDecks"),
+    spotifyTrackId: v.string(),
+    name: v.string(),
+    artistName: v.string(),
+    albumName: v.string(),
+    releaseYear: v.number(),
+    previewUrl: v.string(), // required - canciones sin preview son filtradas
+    coverUrl: v.string(),
+  })
+    .index("by_deck", ["deckId"]),
+
+  // Salas de juego Hitster
+  hitsterRooms: defineTable({
+    name: v.string(),
+    code: v.string(), // Código único 5 chars
+    hostId: v.string(),
+    status: v.union(
+      v.literal("waiting"),
+      v.literal("loading"), // cargando playlist
+      v.literal("playing"),
+      v.literal("finished")
+    ),
+    deckId: v.optional(v.id("hitsterDecks")),
+    spotifyPlaylistUrl: v.optional(v.string()), // URL antes de procesar
+    cardsToWin: v.number(), // 6, 8, 10
+    turnTimeLimit: v.optional(v.number()), // segundos o null = sin límite
+    currentPlayerIndex: v.number(),
+    playerOrder: v.array(v.string()), // userIds en orden de turno
+    deckCardIds: v.array(v.id("hitsterSongs")), // Deck barajado
+    currentCardIndex: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_host", ["hostId"])
+    .index("by_status", ["status"]),
+
+  // Jugadores en sala Hitster
+  hitsterPlayers: defineTable({
+    roomId: v.id("hitsterRooms"),
+    userId: v.string(),
+    name: v.string(),
+    avatarUrl: v.optional(v.string()),
+    isHost: v.boolean(),
+    isConnected: v.boolean(),
+    score: v.number(),
+    timeline: v.array(
+      v.object({
+        songId: v.id("hitsterSongs"),
+        year: v.number(),
+      })
+    ),
+    joinedAt: v.number(),
+    lastSeenAt: v.number(),
+  })
+    .index("by_room", ["roomId"])
+    .index("by_room_user", ["roomId", "userId"]),
+
+  // Turno actual en Hitster
+  hitsterTurns: defineTable({
+    roomId: v.id("hitsterRooms"),
+    playerId: v.id("hitsterPlayers"),
+    songId: v.id("hitsterSongs"),
+    phase: v.union(
+      v.literal("listening"),
+      v.literal("placing"),
+      v.literal("revealing"),
+      v.literal("bonus"),
+      v.literal("result")
+    ),
+    placedAtIndex: v.optional(v.number()),
+    isCorrect: v.optional(v.boolean()),
+    artistGuess: v.optional(v.string()),
+    songGuess: v.optional(v.string()),
+    artistCorrect: v.optional(v.boolean()),
+    songCorrect: v.optional(v.boolean()),
+    pointsEarned: v.number(),
+    startedAt: v.number(),
+    phaseStartedAt: v.number(),
+  })
+    .index("by_room", ["roomId"]),
 });
